@@ -1,4 +1,13 @@
-import React, { useState, useCallback, ChangeEvent, DragEvent } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  ChangeEvent,
+  DragEvent,
+} from "react";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { auth } from "../firebaseConfig";
+import AuthForm from "../components/AuthForm";
 import { Upload, Camera, X, Loader2, AlertCircle } from "lucide-react";
 
 type DetectionResult = {
@@ -272,4 +281,27 @@ const FoodDetectionApp = () => {
   );
 };
 
-export default FoodDetectionApp;
+export default function Home() {
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+    });
+    return () => unsub();
+  }, []);
+
+  if (!user) {
+    return <AuthForm />;
+  }
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "flex-end", padding: 16 }}>
+        <span style={{ marginRight: 16 }}>Bem-vindo, {user.email}</span>
+        <button onClick={() => signOut(auth)}>Sair</button>
+      </div>
+      <FoodDetectionApp />
+    </div>
+  );
+}
