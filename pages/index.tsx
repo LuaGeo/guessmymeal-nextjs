@@ -297,9 +297,14 @@ export default function Home() {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "flex-end", padding: 16 }}>
-        <span style={{ marginRight: 16 }}>Bem-vindo, {user.email}</span>
-        <button onClick={() => signOut(auth)}>Sair</button>
+      <div className="flex justify-end items-center gap-4 p-4">
+        <span className="text-gray-800 font-medium">Welcome, {user.email}</span>
+        <button
+          onClick={() => signOut(auth)}
+          className="bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold px-5 py-2 rounded-lg hover:from-orange-600 hover:to-red-600 transition-all"
+        >
+          Logout
+        </button>
       </div>
       <FoodDetectionApp />
     </div>
