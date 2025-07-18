@@ -12,9 +12,13 @@ COPY yarn.lock ./
 # Install Node.js dependencies
 RUN yarn install --frozen-lockfile
 
-# Install Python dependencies
+# Create and activate Python virtual environment
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install Python dependencies in virtual environment
 COPY requirements.txt ./
-RUN pip3 install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy source code
 COPY . .
