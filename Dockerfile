@@ -1,6 +1,6 @@
 FROM node:18-alpine AS base
 
-# Install Python and dependencies
+# Install Python and ALL necessary dependencies
 RUN apk add --no-cache \
     python3 \
     py3-pip \
@@ -19,7 +19,14 @@ RUN apk add --no-cache \
     openjpeg-dev \
     tiff-dev \
     tk-dev \
-    tcl-dev
+    tcl-dev \
+    harfbuzz-dev \
+    fribidi-dev \
+    libjpeg-turbo-dev \
+    libpng-dev \
+    gfortran \
+    lapack-dev \
+    libstdc++
 
 WORKDIR /app
 
@@ -34,10 +41,10 @@ RUN yarn install --frozen-lockfile
 RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Install Python dependencies in virtual environment
+# Install Python dependencies with more verbose output
 COPY requirements.txt ./
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --verbose -r requirements.txt
 
 # Copy source code
 COPY . .
