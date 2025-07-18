@@ -1,32 +1,19 @@
-FROM node:18-alpine AS base
+FROM node:18
 
-# Install Python and ALL necessary dependencies
-RUN apk add --no-cache \
+# Install Python and system dependencies
+RUN apt-get update && apt-get install -y \
     python3 \
-    py3-pip \
+    python3-pip \
+    python3-venv \
     python3-dev \
-    gcc \
-    g++ \
-    make \
-    musl-dev \
-    linux-headers \
-    libffi-dev \
-    openssl-dev \
-    jpeg-dev \
-    zlib-dev \
-    freetype-dev \
-    lcms2-dev \
-    openjpeg-dev \
-    tiff-dev \
-    tk-dev \
-    tcl-dev \
-    harfbuzz-dev \
-    fribidi-dev \
-    libjpeg-turbo-dev \
-    libpng-dev \
-    gfortran \
-    lapack-dev \
-    libstdc++
+    build-essential \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    libgtk-3-0 \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -41,10 +28,10 @@ RUN yarn install --frozen-lockfile
 RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Install Python dependencies with more verbose output
+# Install Python dependencies
 COPY requirements.txt ./
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
-RUN pip install --no-cache-dir --verbose -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy source code
 COPY . .
