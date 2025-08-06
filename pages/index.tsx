@@ -134,6 +134,10 @@ const FoodDetectionApp = () => {
     setError(null);
   };
 
+  useEffect(() => {
+    console.log("API KEY:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
       {/* Header */}
