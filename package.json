@@ -6,7 +6,9 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "type-check": "tsc --noEmit",
+    "build:analyze": "ANALYZE=true yarn build"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -15,6 +17,7 @@
     "axios": "^1.10.0",
     "dotenv": "^17.2.1",
     "firebase": "^11.10.0",
+    "formidable": "^3.5.4",
     "lucide-react": "^0.525.0",
     "next": "15.4.1",
     "react": "19.1.0",
@@ -24,6 +27,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4.1.11",
+    "@types/formidable": "^3.4.5",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
