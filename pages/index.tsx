@@ -8,7 +8,7 @@ import React, {
   DragEvent,
 } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { auth } from "../firebaseConfig";
+import { auth, sendEmailVerification } from "../firebaseConfig"; // Make sure to import sendEmailVerification
 import AuthForm from "../components/AuthForm";
 import { Upload, Camera, X, Loader2, AlertCircle } from "lucide-react";
 import { getApiUrl } from "../config/api";
@@ -18,7 +18,9 @@ type DetectionResult = {
   confidence: number;
 };
 
+// Your FoodDetectionApp component remains unchanged
 const FoodDetectionApp = () => {
+  // ... (all of your existing FoodDetectionApp code)
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [detectedImage, setDetectedImage] = useState<string | null>(null);
@@ -72,10 +74,9 @@ const FoodDetectionApp = () => {
     setError(null);
     try {
       const formData = new FormData();
-      formData.append("file", selectedFile); // Your FastAPI expects "file"
+      formData.append("file", selectedFile);
 
-      // CHANGE: Use /api/detect-food instead of /predict
-      const apiUrl = getApiUrl("/api/detect-food"); // or simply "/api/detect-food"
+      const apiUrl = getApiUrl("/api/detect-food");
       console.log("Making request to:", apiUrl);
       console.log(
         "File:",
@@ -84,7 +85,6 @@ const FoodDetectionApp = () => {
         selectedFile.size
       );
 
-      // Log FormData contents
       for (const [key, value] of formData.entries()) {
         console.log("FormData entry:", key, value);
       }
@@ -92,8 +92,6 @@ const FoodDetectionApp = () => {
       const apiResponse = await fetch(apiUrl, {
         method: "POST",
         body: formData,
-        // Don't manually set Content-Type for multipart/form-data
-        // Browser sets it automatically with boundary
       });
 
       console.log("Response status:", apiResponse.status);
@@ -154,9 +152,7 @@ const FoodDetectionApp = () => {
           </div>
         </div>
       </header>
-
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Upload Section */}
         {!selectedImage && (
           <div className="mb-8">
             <div
@@ -185,11 +181,8 @@ const FoodDetectionApp = () => {
             </div>
           </div>
         )}
-
-        {/* Image Display and Results */}
         {selectedImage && (
           <div className="space-y-6">
-            {/* Action Buttons */}
             <div className="flex justify-center space-x-4">
               <button
                 onClick={detectFood}
@@ -216,18 +209,13 @@ const FoodDetectionApp = () => {
                 <span>New image</span>
               </button>
             </div>
-
-            {/* Error Display */}
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center space-x-2">
                 <AlertCircle className="h-5 w-5 text-red-500" />
                 <span className="text-red-700">{error}</span>
               </div>
             )}
-
-            {/* Images Display */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Original Image */}
               <div className="bg-white rounded-xl shadow-lg overflow-hidden">
                 <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b">
                   <h3 className="text-lg font-semibold text-gray-900">
@@ -242,8 +230,6 @@ const FoodDetectionApp = () => {
                   />
                 </div>
               </div>
-
-              {/* Detected Image */}
               {detectedImage && (
                 <div className="bg-white rounded-xl shadow-lg overflow-hidden">
                   <div className="bg-gradient-to-r from-orange-50 to-red-50 px-6 py-4 border-b">
@@ -261,8 +247,6 @@ const FoodDetectionApp = () => {
                 </div>
               )}
             </div>
-
-            {/* Detection Results */}
             {detectionResults.length > 0 && (
               <div className="bg-white rounded-xl shadow-lg">
                 <div className="bg-gradient-to-r from-green-50 to-blue-50 px-6 py-4 border-b">
@@ -299,7 +283,6 @@ const FoodDetectionApp = () => {
                 </div>
               </div>
             )}
-
             {detectionResults.length === 0 && detectedImage && (
               <div className="bg-gray-50 rounded-xl p-8 text-center">
                 <AlertCircle className="mx-auto h-12 w-12 text-gray-400 mb-4" />
@@ -321,18 +304,57 @@ const FoodDetectionApp = () => {
 
 export default function Home() {
   const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
       setUser(user);
+      setLoading(false);
     });
     return () => unsub();
   }, []);
 
+  // Show a loading state while we check the user's status
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <Loader2 className="h-10 w-10 text-orange-500 animate-spin" />
+      </div>
+    );
+  }
+
+  // If no user is logged in, show the login/signup form
   if (!user) {
     return <AuthForm />;
   }
 
+  // If a user is logged in, but their email is NOT verified, show a message
+  if (user && !user.emailVerified) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex flex-col items-center justify-center p-4">
+        <div className="max-w-xl mx-auto bg-white rounded-xl shadow-lg p-8 text-center">
+          <AlertCircle className="mx-auto h-16 w-16 text-orange-500 mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Please verify your email
+          </h2>
+          <p className="text-gray-600 mb-6">
+            A verification link has been sent to **{user.email}**. Click the
+            link in your inbox to activate your account.
+          </p>
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
+            <button
+              onClick={() => signOut(auth)}
+              className="w-full sm:w-auto bg-gray-500 text-white font-semibold px-6 py-2 rounded-lg hover:bg-gray-600 transition-all"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // If a user is logged in AND their email is verified, show the full app
   return (
     <div>
       <div className="flex justify-end items-center gap-4 p-4">
