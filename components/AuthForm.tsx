@@ -5,6 +5,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
+  sendEmailVerification,
 } from "firebase/auth";
 import { FcGoogle } from "react-icons/fc";
 
@@ -14,15 +15,49 @@ export default function AuthForm() {
   const [error, setError] = useState("");
   const [mode, setMode] = useState<"login" | "signup">("login");
 
+  // New state to manage the post-signup message
+  const [signupMessage, setSignupMessage] = useState("");
+
+  const validatePassword = (password: string) => {
+    // Regex for password validation (at least 8 chars, one uppercase, one lowercase, one number, one special character)
+    const regex =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    return regex.test(password);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(""); // Clear previous errors
+    setSignupMessage(""); // Clear previous messages
+
     try {
       if (mode === "login") {
         await signInWithEmailAndPassword(auth, email, password);
       } else {
-        await createUserWithEmailAndPassword(auth, email, password);
+        // Signup mode
+        if (!validatePassword(password)) {
+          setError(
+            "Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character."
+          );
+          return;
+        }
+
+        // Create user with email and password
+        const userCredential = await createUserWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+        const user = userCredential.user;
+
+        // Send email verification
+        if (user) {
+          await sendEmailVerification(user);
+          setSignupMessage(
+            "A verification email has been sent to your address. Please verify your email to log in."
+          );
+        }
       }
-      setError("");
     } catch (err: any) {
       setError(err.message);
     }
@@ -99,6 +134,11 @@ export default function AuthForm() {
       {error && (
         <div className="w-full bg-red-50 border border-red-200 text-red-700 rounded-lg p-2 mt-2 text-center">
           {error}
+        </div>
+      )}
+      {signupMessage && (
+        <div className="w-full bg-green-50 border border-green-200 text-green-700 rounded-lg p-2 mt-2 text-center">
+          {signupMessage}
         </div>
       )}
     </div>
