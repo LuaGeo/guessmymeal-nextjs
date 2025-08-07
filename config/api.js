@@ -1,8 +1,8 @@
 // config/api.js
 export const getApiUrl = (endpoint) => {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
-      : "http://localhost:3000";
+  const baseUrl = process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL}`
+    : "http://localhost:3000";
 
   // If endpoint already includes /api/, don't add it again
   if (endpoint.startsWith("/api/")) {
