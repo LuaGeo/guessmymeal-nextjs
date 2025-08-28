@@ -16,6 +16,13 @@ import { getApiUrl } from "../config/api";
 type DetectionResult = {
   class_name: string;
   confidence: number;
+  nutrition?: {
+    ["energy-kcal"]?: number;
+    proteins?: number;
+    fat?: number;
+    carbohydrates?: number;
+    [key: string]: number | undefined;
+  };
 };
 
 // Your FoodDetectionApp component remains unchanged
@@ -269,6 +276,8 @@ const FoodDetectionApp = () => {
                             {(result.confidence * 100).toFixed(1)}%
                           </span>
                         </div>
+
+                        {/* Barre de progression */}
                         <div className="mt-2">
                           <div className="bg-white rounded-full h-2 overflow-hidden">
                             <div
@@ -277,6 +286,42 @@ const FoodDetectionApp = () => {
                             />
                           </div>
                         </div>
+
+                        {/* Bloc nutrition ajouté ici */}
+                        {result.nutrition && (
+                          <div className="mt-3 text-sm text-gray-700">
+                            <p>
+                              🍽️ <strong>Nutrition (pour 100g) :</strong>
+                            </p>
+                            <ul className="list-disc list-inside">
+                              {result.nutrition?.["energy-kcal"] !==
+                                undefined && (
+                                <li>
+                                  <strong>Calories :</strong>{" "}
+                                  {result.nutrition?.["energy-kcal"]} kcal
+                                </li>
+                              )}
+                              {result.nutrition.proteins !== undefined && (
+                                <li>
+                                  <strong>Protéines :</strong>{" "}
+                                  {result.nutrition.proteins} g
+                                </li>
+                              )}
+                              {result.nutrition.fat !== undefined && (
+                                <li>
+                                  <strong>Lipides :</strong>{" "}
+                                  {result.nutrition.fat} g
+                                </li>
+                              )}
+                              {result.nutrition.carbohydrates !== undefined && (
+                                <li>
+                                  <strong>Glucides :</strong>{" "}
+                                  {result.nutrition.carbohydrates} g
+                                </li>
+                              )}
+                            </ul>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
