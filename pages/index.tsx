@@ -287,7 +287,7 @@ const FoodDetectionApp = () => {
                           </div>
                         </div>
 
-                        {/* Bloc nutrition ajouté ici */}
+                        {/* Bloc nutrition
                         {result.nutrition && (
                           <div className="mt-3 text-sm text-gray-700">
                             <p>
@@ -321,7 +321,7 @@ const FoodDetectionApp = () => {
                               )}
                             </ul>
                           </div>
-                        )}
+                        )} */}
                       </div>
                     ))}
                   </div>
