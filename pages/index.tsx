@@ -276,7 +276,6 @@ const FoodDetectionApp = () => {
                             {(result.confidence * 100).toFixed(1)}%
                           </span>
                         </div>
-
                         {/* Barre de progression */}
                         <div className="mt-2">
                           <div className="bg-white rounded-full h-2 overflow-hidden">
@@ -286,8 +285,7 @@ const FoodDetectionApp = () => {
                             />
                           </div>
                         </div>
-
-                        {/* Bloc nutrition
+                        {/* Bloc nutrition */}
                         {result.nutrition && (
                           <div className="mt-3 text-sm text-gray-700">
                             <p>
@@ -321,7 +319,7 @@ const FoodDetectionApp = () => {
                               )}
                             </ul>
                           </div>
-                        )} */}
+                        )}
                       </div>
                     ))}
                   </div>
