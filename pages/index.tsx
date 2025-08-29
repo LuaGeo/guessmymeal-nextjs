@@ -83,7 +83,7 @@ const FoodDetectionApp = () => {
       const formData = new FormData();
       formData.append("file", selectedFile);
 
-      const apiUrl = getApiUrl("/api/predict");
+      const apiUrl = getApiUrl("/api/detect-food");
       console.log("Making request to:", apiUrl);
       console.log(
         "File:",
