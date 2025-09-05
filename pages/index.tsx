@@ -1,4 +1,4 @@
-// pages/index.tsx
+// pages/index.tsx - Version mise à jour
 
 import React, {
   useState,
@@ -10,10 +10,9 @@ import React, {
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, sendEmailVerification } from "../firebaseConfig";
 import AuthForm from "../components/AuthForm";
-import { Upload, Camera, X, Loader2, AlertCircle } from "lucide-react";
-import { getApiUrl } from "../config/api"; // ou getPythonApiUrl si option B
+import { Upload, Camera, X, Loader2, AlertCircle, Heart } from "lucide-react";
 
-// NOUVEAU TYPE pour correspondre à votre API Python
+// NOUVEAUX TYPES pour la nutrition complète
 type PythonApiResult = {
   success: boolean;
   image_size: {
@@ -31,44 +30,55 @@ type PythonApiResult = {
       ratio: number;
       grams: number;
     };
-    nutrition_100g: {
-      product_name: string;
-      "energy-kcal_100g": number;
-      proteins_100g: number;
-      carbohydrates_100g: number;
-      fat_100g: number;
-      _id: string;
-    } | null;
+    nutrition_per_100g: {
+      calories: number;
+      proteins: number;
+      carbohydrates: number;
+      fat: number;
+      fiber: number; // NOUVEAU
+      sugar: number; // NOUVEAU
+      sodium: number; // NOUVEAU
+    };
     nutrition_estimated: {
-      kcal: number;
-      protein_g: number;
-      carbs_g: number;
-      fat_g: number;
-    } | null;
+      calories: number;
+      proteins: number;
+      carbohydrates: number;
+      fat: number;
+      fiber: number; // NOUVEAU
+      sugar: number; // NOUVEAU
+      sodium: number; // NOUVEAU
+    };
+    health_score: number; // NOUVEAU
   }>;
   nutrition_total: {
-    kcal: number;
-    protein_g: number;
-    carbs_g: number;
-    fat_g: number;
+    calories: number;
+    proteins: number;
+    carbohydrates: number;
+    fat: number;
+    fiber: number; // NOUVEAU
+    sugar: number; // NOUVEAU
+    sodium: number; // NOUVEAU
   };
 };
 
-// Type pour l'affichage (compatible avec votre UI existante)
+// Type pour l'affichage (mis à jour)
 type DetectionResult = {
   class_name: string;
   confidence: number;
   nutrition?: {
-    ["energy-kcal"]?: number;
+    calories?: number;
     proteins?: number;
-    fat?: number;
     carbohydrates?: number;
-    [key: string]: number | undefined;
+    fat?: number;
+    fiber?: number; // NOUVEAU
+    sugar?: number; // NOUVEAU
+    sodium?: number; // NOUVEAU
   };
   portion?: {
     ratio: number;
     grams: number;
   };
+  health_score?: number; // NOUVEAU
 };
 
 const FoodDetectionApp = () => {
@@ -130,10 +140,9 @@ const FoodDetectionApp = () => {
     try {
       const formData = new FormData();
       formData.append("file", selectedFile);
-      // Optionnel : ajouter le poids total estimé
+      // Optionnel : ajouter le poids total
       // formData.append("total_weight_g", "300");
 
-      // Utilisation du nouvel endpoint
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       const fullUrl = `${apiUrl}/api/predict-llm`;
 
@@ -143,8 +152,6 @@ const FoodDetectionApp = () => {
         method: "POST",
         body: formData,
       });
-
-      console.log("Response status:", apiResponse.status);
 
       if (!apiResponse.ok) {
         const errorText = await apiResponse.text();
@@ -156,34 +163,28 @@ const FoodDetectionApp = () => {
       console.log("API Result:", result);
 
       if (result.success) {
-        // Pas d'image annotée dans la nouvelle API
         setDetectedImage(selectedImage);
 
-        // Transformer les données pour correspondre à l'ancien format UI
+        // Transformer les données pour l'affichage avec TOUTES les nouvelles données
         const transformedResults: DetectionResult[] = result.items.map(
           (item) => ({
             class_name: item.label,
             confidence: item.confidence || 0,
-            nutrition: item.nutrition_estimated
-              ? {
-                  "energy-kcal": Math.round(item.nutrition_estimated.kcal),
-                  proteins: parseFloat(
-                    item.nutrition_estimated.protein_g.toFixed(1)
-                  ),
-                  carbohydrates: parseFloat(
-                    item.nutrition_estimated.carbs_g.toFixed(1)
-                  ),
-                  fat: parseFloat(item.nutrition_estimated.fat_g.toFixed(1)),
-                }
-              : item.nutrition_100g
-              ? {
-                  "energy-kcal": item.nutrition_100g["energy-kcal_100g"],
-                  proteins: item.nutrition_100g.proteins_100g,
-                  carbohydrates: item.nutrition_100g.carbohydrates_100g,
-                  fat: item.nutrition_100g.fat_100g,
-                }
-              : undefined,
+            nutrition: {
+              calories: Math.round(item.nutrition_estimated.calories),
+              proteins: parseFloat(
+                item.nutrition_estimated.proteins.toFixed(1)
+              ),
+              carbohydrates: parseFloat(
+                item.nutrition_estimated.carbohydrates.toFixed(1)
+              ),
+              fat: parseFloat(item.nutrition_estimated.fat.toFixed(1)),
+              fiber: parseFloat(item.nutrition_estimated.fiber.toFixed(1)), // NOUVEAU
+              sugar: parseFloat(item.nutrition_estimated.sugar.toFixed(1)), // NOUVEAU
+              sodium: parseFloat(item.nutrition_estimated.sodium.toFixed(1)), // NOUVEAU
+            },
             portion: item.portion,
+            health_score: item.health_score, // NOUVEAU
           })
         );
 
@@ -209,9 +210,22 @@ const FoodDetectionApp = () => {
     setError(null);
   };
 
-  useEffect(() => {
-    console.log("API KEY:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
-  }, []);
+  // Fonction pour obtenir la couleur du score de santé
+  const getHealthScoreColor = (score: number) => {
+    if (score >= 80) return "text-green-600 bg-green-50";
+    if (score >= 60) return "text-blue-600 bg-blue-50";
+    if (score >= 40) return "text-yellow-600 bg-yellow-50";
+    if (score >= 20) return "text-orange-600 bg-orange-50";
+    return "text-red-600 bg-red-50";
+  };
+
+  const getHealthScoreLabel = (score: number) => {
+    if (score >= 80) return "Excellent";
+    if (score >= 60) return "Bon";
+    if (score >= 40) return "Correct";
+    if (score >= 20) return "Moyen";
+    return "Pauvre";
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
@@ -224,7 +238,9 @@ const FoodDetectionApp = () => {
             </div>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">GuessMyMeal</h1>
-              <p className="text-gray-600">Food detection with AI</p>
+              <p className="text-gray-600">
+                Food detection with complete nutrition analysis
+              </p>
             </div>
           </div>
         </div>
@@ -271,12 +287,12 @@ const FoodDetectionApp = () => {
                 {isLoading ? (
                   <>
                     <Loader2 className="h-5 w-5 animate-spin" />
-                    <span>Detection in progress...</span>
+                    <span>Analyzing nutrition...</span>
                   </>
                 ) : (
                   <>
                     <Camera className="h-5 w-5" />
-                    <span>Detect foods</span>
+                    <span>Analyze nutrition</span>
                   </>
                 )}
               </button>
@@ -316,13 +332,13 @@ const FoodDetectionApp = () => {
                 <div className="bg-white rounded-xl shadow-lg overflow-hidden">
                   <div className="bg-gradient-to-r from-orange-50 to-red-50 px-6 py-4 border-b">
                     <h3 className="text-lg font-semibold text-gray-900">
-                      Detection Results
+                      Analysis Results
                     </h3>
                   </div>
                   <div className="p-6">
                     <img
-                      src={selectedImage} // Pas d'image annotée, on utilise l'originale
-                      alt="Detected"
+                      src={selectedImage}
+                      alt="Analyzed"
                       className="w-full h-auto rounded-lg shadow-sm"
                     />
                   </div>
@@ -330,74 +346,140 @@ const FoodDetectionApp = () => {
               )}
             </div>
 
-            {/* Totaux nutritionnels */}
+            {/* Totaux nutritionnels COMPLETS */}
             {nutritionTotal && (
               <div className="bg-white rounded-xl shadow-lg">
                 <div className="bg-gradient-to-r from-purple-50 to-pink-50 px-6 py-4 border-b">
                   <h3 className="text-lg font-semibold text-gray-900">
-                    Nutrition Totale
+                    Nutrition Totale Complète
                   </h3>
                 </div>
                 <div className="p-6">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-red-50 p-4 rounded-lg text-center">
-                      <div className="text-2xl font-bold text-red-600">
-                        {Math.round(nutritionTotal.kcal)}
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                    <div className="bg-red-50 p-3 rounded-lg text-center">
+                      <div className="text-xl font-bold text-red-600">
+                        {Math.round(nutritionTotal.calories)}
                       </div>
-                      <div className="text-sm text-gray-600">Calories</div>
+                      <div className="text-xs text-gray-600">Calories</div>
                     </div>
-                    <div className="bg-blue-50 p-4 rounded-lg text-center">
-                      <div className="text-2xl font-bold text-blue-600">
-                        {nutritionTotal.protein_g.toFixed(1)}g
+                    <div className="bg-blue-50 p-3 rounded-lg text-center">
+                      <div className="text-xl font-bold text-blue-600">
+                        {nutritionTotal.proteins.toFixed(1)}g
                       </div>
-                      <div className="text-sm text-gray-600">Protéines</div>
+                      <div className="text-xs text-gray-600">Protéines</div>
                     </div>
-                    <div className="bg-yellow-50 p-4 rounded-lg text-center">
-                      <div className="text-2xl font-bold text-yellow-600">
-                        {nutritionTotal.carbs_g.toFixed(1)}g
+                    <div className="bg-yellow-50 p-3 rounded-lg text-center">
+                      <div className="text-xl font-bold text-yellow-600">
+                        {nutritionTotal.carbohydrates.toFixed(1)}g
                       </div>
-                      <div className="text-sm text-gray-600">Glucides</div>
+                      <div className="text-xs text-gray-600">Glucides</div>
                     </div>
-                    <div className="bg-green-50 p-4 rounded-lg text-center">
-                      <div className="text-2xl font-bold text-green-600">
-                        {nutritionTotal.fat_g.toFixed(1)}g
+                    <div className="bg-green-50 p-3 rounded-lg text-center">
+                      <div className="text-xl font-bold text-green-600">
+                        {nutritionTotal.fat.toFixed(1)}g
                       </div>
-                      <div className="text-sm text-gray-600">Lipides</div>
+                      <div className="text-xs text-gray-600">Lipides</div>
+                    </div>
+                    <div className="bg-emerald-50 p-3 rounded-lg text-center">
+                      <div className="text-xl font-bold text-emerald-600">
+                        {nutritionTotal.fiber.toFixed(1)}g
+                      </div>
+                      <div className="text-xs text-gray-600">Fibres</div>
+                    </div>
+                    <div className="bg-pink-50 p-3 rounded-lg text-center">
+                      <div className="text-xl font-bold text-pink-600">
+                        {nutritionTotal.sugar.toFixed(1)}g
+                      </div>
+                      <div className="text-xs text-gray-600">Sucre</div>
+                    </div>
+                    <div className="bg-purple-50 p-3 rounded-lg text-center">
+                      <div className="text-xl font-bold text-purple-600">
+                        {nutritionTotal.sodium.toFixed(0)}mg
+                      </div>
+                      <div className="text-xs text-gray-600">Sodium</div>
                     </div>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Détails par aliment */}
+            {/* Détails par aliment avec score de santé */}
             {detectionResults.length > 0 && (
               <div className="bg-white rounded-xl shadow-lg">
                 <div className="bg-gradient-to-r from-green-50 to-blue-50 px-6 py-4 border-b">
                   <h3 className="text-lg font-semibold text-gray-900">
-                    Aliments Détectés
+                    Aliments Détectés avec Analyse Nutritionnelle
                   </h3>
                 </div>
                 <div className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {detectionResults.map((result, index) => (
                       <div
                         key={index}
-                        className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-4 border border-green-200"
+                        className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-6 border border-green-200"
                       >
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-semibold text-gray-900 capitalize">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="font-semibold text-lg text-gray-900 capitalize">
                             {result.class_name}
                           </span>
-                          {result.confidence > 0 && (
-                            <span className="text-sm font-medium text-green-600">
-                              {(result.confidence * 100).toFixed(0)}%
-                            </span>
-                          )}
+                          <div className="flex items-center space-x-2">
+                            {result.confidence > 0 && (
+                              <span className="text-sm font-medium text-green-600">
+                                {(result.confidence * 100).toFixed(0)}%
+                              </span>
+                            )}
+                            {result.health_score !== undefined && (
+                              <div
+                                className={`px-2 py-1 rounded-full text-xs font-bold flex items-center space-x-1 ${getHealthScoreColor(
+                                  result.health_score
+                                )}`}
+                              >
+                                <Heart className="h-3 w-3" />
+                                <span>{result.health_score}/100</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
+
+                        {/* Score de santé détaillé */}
+                        {result.health_score !== undefined && (
+                          <div className="mb-3">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="font-medium">
+                                Qualité nutritionnelle:
+                              </span>
+                              <span
+                                className={`font-bold ${
+                                  getHealthScoreColor(
+                                    result.health_score
+                                  ).split(" ")[0]
+                                }`}
+                              >
+                                {getHealthScoreLabel(result.health_score)}
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                              <div
+                                className={`h-2 rounded-full transition-all duration-300 ${
+                                  result.health_score >= 80
+                                    ? "bg-green-500"
+                                    : result.health_score >= 60
+                                    ? "bg-blue-500"
+                                    : result.health_score >= 40
+                                    ? "bg-yellow-500"
+                                    : result.health_score >= 20
+                                    ? "bg-orange-500"
+                                    : "bg-red-500"
+                                }`}
+                                style={{ width: `${result.health_score}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
 
                         {/* Portion */}
                         {result.portion && (
-                          <div className="mb-2 text-sm text-gray-700">
+                          <div className="mb-3 text-sm text-gray-700">
                             <p>
                               <strong>Portion:</strong> {result.portion.grams}g
                               ({(result.portion.ratio * 100).toFixed(0)}%)
@@ -405,39 +487,48 @@ const FoodDetectionApp = () => {
                           </div>
                         )}
 
-                        {/* Nutrition */}
+                        {/* Nutrition complète */}
                         {result.nutrition && (
                           <div className="text-sm text-gray-700">
-                            <p>
-                              <strong>Nutrition estimée:</strong>
+                            <p className="font-medium mb-2">
+                              Nutrition pour cette portion:
                             </p>
-                            <ul className="list-disc list-inside mt-1">
-                              {result.nutrition["energy-kcal"] !==
-                                undefined && (
-                                <li>
-                                  <strong>Calories:</strong>{" "}
-                                  {result.nutrition["energy-kcal"]} kcal
-                                </li>
+                            <div className="grid grid-cols-2 gap-1 text-xs">
+                              <div>
+                                <strong>Calories:</strong>{" "}
+                                {result.nutrition.calories} kcal
+                              </div>
+                              <div>
+                                <strong>Protéines:</strong>{" "}
+                                {result.nutrition.proteins}g
+                              </div>
+                              <div>
+                                <strong>Glucides:</strong>{" "}
+                                {result.nutrition.carbohydrates}g
+                              </div>
+                              <div>
+                                <strong>Lipides:</strong> {result.nutrition.fat}
+                                g
+                              </div>
+                              {result.nutrition.fiber !== undefined && (
+                                <div>
+                                  <strong>Fibres:</strong>{" "}
+                                  {result.nutrition.fiber}g
+                                </div>
                               )}
-                              {result.nutrition.proteins !== undefined && (
-                                <li>
-                                  <strong>Protéines:</strong>{" "}
-                                  {result.nutrition.proteins}g
-                                </li>
+                              {result.nutrition.sugar !== undefined && (
+                                <div>
+                                  <strong>Sucre:</strong>{" "}
+                                  {result.nutrition.sugar}g
+                                </div>
                               )}
-                              {result.nutrition.carbohydrates !== undefined && (
-                                <li>
-                                  <strong>Glucides:</strong>{" "}
-                                  {result.nutrition.carbohydrates}g
-                                </li>
+                              {result.nutrition.sodium !== undefined && (
+                                <div>
+                                  <strong>Sodium:</strong>{" "}
+                                  {result.nutrition.sodium}mg
+                                </div>
                               )}
-                              {result.nutrition.fat !== undefined && (
-                                <li>
-                                  <strong>Lipides:</strong>{" "}
-                                  {result.nutrition.fat}g
-                                </li>
-                              )}
-                            </ul>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -453,7 +544,6 @@ const FoodDetectionApp = () => {
   );
 };
 
-// Reste du code inchangé
 export default function Home() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
